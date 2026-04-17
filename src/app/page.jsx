@@ -1,28 +1,77 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
+// ✅ async function
 async function getData() {
-  const res = await fetch("http://localhost:3000/data/quran.json");
+  const res = await fetch("/data/quran.json");
   return res.json();
 }
 
-export default async function Home() {
-  const data = await getData();
+export default function Home() {
+  const [data, setData] = useState([]);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    getData().then((res) => setData(res));
+  }, []);
+
+  // 🔥 flatten all ayahs
+  const allAyahs = data.flatMap((surah) =>
+    surah.verses.map((v) => ({
+      surahId: surah.id,
+      surahName: surah.name,
+      arabic: v.text,
+      translation: v.translation,
+    }))
+  );
+
+  // 🔍 filter
+  const filtered = allAyahs.filter((a) =>
+    a.translation.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <h1 className="col-span-full text-2xl font-bold mb-4">
-        Quran Surah List
-      </h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Quran Surah List</h1>
 
-      {data.map((surah) => (
-        <Link key={surah.id} href={`/surah/${surah.id}`}>
-          <div className="border p-4 rounded-lg hover:shadow cursor-pointer">
-            <h2 className="text-xl font-semibold">{surah.name}</h2>
-            <h2 className="text-xl font-semibold">{surah.transliteration}</h2>
-            <p className="text-gray-500">{surah.arabic}</p>
-          </div>
-        </Link>
-      ))}
+      {/* 🔍 Search Input */}
+      <input
+        type="text"
+        placeholder="Search translation..."
+        className="border p-2 w-full mb-6 rounded"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+
+      {query ? (
+        <div>
+          {filtered.slice(0, 20).map((a, i) => (
+            <Link key={i} href={`/surah/${a.surahId}`}>
+              <div className="border p-4 mb-3 rounded hover:bg-gray-100">
+                <p className="text-right text-xl">{a.arabic}</p>
+                <p className="text-gray-600">{a.translation}</p>
+                <p className="text-sm text-blue-500">
+                  {a.surahName}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {data.map((surah) => (
+            <Link key={surah.id} href={`/surah/${surah.id}`}>
+              <div className="border p-4 rounded hover:shadow">
+                <p className="text-xl">{surah.arabic}</p>
+                <p className="text-gray-500">{surah.name}</p>
+                <p className="text-gray-500">{surah.transliteration}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
